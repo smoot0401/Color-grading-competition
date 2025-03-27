@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>사진 보정 대회 심사</title>
+    <style>
+        body {
+            font-family: 'Pretendard', sans-serif;
+            transition: background 0.3s;
+            margin: 0;
+            padding: 20px;
+            text-align: center;
+        }
+        .controls {
+            width: 100%;
+            padding: 15px 0;
+            background: #f8f8f8;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            position: relative;
+        }
+        .file-input {
+            display: none;
+        }
+        .file-label {
+            padding: 8px 15px;
+            background: #ddd;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .container {
+            display: grid;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .first-row {
+            display: flex;
+            justify-content: center;
+        }
+        .image-box {
+            position: relative;
+            border: 1px solid #ccc;
+            padding: 10px;
+            text-align: center;
+            background: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .image-box img {
+            max-width: 100%;
+            cursor: pointer;
+        }
+        .image-box .delete-btn {
+            position: absolute;
+            top: 5px;
+            left: 5px;
+            background: red;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            font-size: 14px;
+            display: none;
+            cursor: pointer;
+        }
+        .name-text {
+            font-size: 20px;
+            margin-top: 5px;
+            color: #111111;
+            display: none;
+        }
+        .name-input {
+            display: block;
+        }
+        .image-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: calc(100% - 40px);
+            background: #111111;
+            display: none;
+            cursor: pointer;
+        }
+        .name-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 30px;
+            background: #111111;
+            display: none;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="controls">
+        <button id="toggleMode">시작</button>
+        <button id="toggleNames">이름 전체 공개</button>
+        <button id="togglePhotos">사진 전체 공개</button>
+        <label class="file-label" for="uploadOriginal">원본 이미지</label>
+        <input type="file" id="uploadOriginal" class="file-input" accept="image/*">
+        <label class="file-label" for="uploadEdited">보정본</label>
+        <input type="file" id="uploadEdited" class="file-input" accept="image/*" multiple>
+        <select id="columnSelect">
+            <option value="2">2개</option>
+            <option value="3" selected>3개</option>
+            <option value="4">4개</option>
+        </select>
+    </div>
+    
+    <div class="first-row" id="firstRow"></div>
+    <div class="container" id="photoGrid" style="grid-template-columns: repeat(3, 1fr);"></div>
+    
+    <script>
+        let isStarted = false;
+        const container = document.getElementById('photoGrid');
+        const firstRow = document.getElementById('firstRow');
+        const toggleMode = document.getElementById('toggleMode');
+        const toggleNames = document.getElementById('toggleNames');
+        const togglePhotos = document.getElementById('togglePhotos');
+        const uploadOriginal = document.getElementById('uploadOriginal');
+        const uploadEdited = document.getElementById('uploadEdited');
+        const columnSelect = document.getElementById('columnSelect');
+        let nameBoxes = [];
+        
+        function updateGridColumns() {
+            const columns = columnSelect.value;
+            container.style.gridTemplateColumns = `repeat(${columns}, 1fr)`;
+            firstRow.style.maxWidth = `${columns * 200}px`;
+        }
+        
+        columnSelect.addEventListener('change', updateGridColumns);
+        
+        function addImage(src, isOriginal = false) {
+            const div = document.createElement('div');
+            div.classList.add('image-box');
+            
+            const img = document.createElement('img');
+            img.src = src;
+            img.onclick = () => window.open(src, '_blank');
+            
+            if (!isOriginal) {
+                const deleteBtn = document.createElement('button');
+                deleteBtn.classList.add('delete-btn');
+                deleteBtn.textContent = 'x';
+                deleteBtn.onclick = () => div.remove();
+                
+                const imageOverlay = document.createElement('div');
+                imageOverlay.classList.add('image-overlay');
+                imageOverlay.onclick = () => imageOverlay.style.display = 'none';
+                
+                const nameOverlay = document.createElement('div');
+                nameOverlay.classList.add('name-overlay');
+                nameOverlay.onclick = () => nameOverlay.style.display = 'none';
+                
+                div.appendChild(deleteBtn);
+                div.appendChild(imageOverlay);
+                div.appendChild(nameOverlay);
+            }
+            
+            div.appendChild(img);
+            
+            if (!isOriginal) {
+                const text = document.createElement('div');
+                text.classList.add('name-text');
+                text.textContent = '이름 없음';
+                
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.placeholder = '이름 입력';
+                input.classList.add('name-input');
+                input.oninput = () => text.textContent = input.value || '이름 없음';
+                
+                nameBoxes.push({ input, text });
+                
+                div.appendChild(input);
+                div.appendChild(text);
+            }
+            
+            if (isOriginal) {
+                firstRow.innerHTML = '';
+                firstRow.appendChild(div);
+                updateGridColumns();
+            } else {
+                container.appendChild(div);
+            }
+        }
+        
+        function handleFileUpload(event, isOriginal) {
+            const files = event.target.files;
+            for (let file of files) {
+                const reader = new FileReader();
+                reader.onload = (e) => addImage(e.target.result, isOriginal);
+                reader.readAsDataURL(file);
+            }
+        }
+        
+        uploadOriginal.addEventListener('change', (event) => handleFileUpload(event, true));
+        uploadEdited.addEventListener('change', (event) => handleFileUpload(event, false));
+        
+        toggleMode.onclick = () => {
+            isStarted = !isStarted;
+            toggleMode.textContent = isStarted ? '수정' : '시작';
+            document.body.style.background = isStarted ? '#333' : '#fff';
+            nameBoxes.forEach(({ input, text }) => {
+                input.style.display = isStarted ? 'none' : 'block';
+                text.style.display = isStarted ? 'block' : 'none';
+            });
+            const deleteButtons = document.querySelectorAll('.delete-btn');
+            deleteButtons.forEach(button => button.style.display = isStarted ? 'none' : 'block');
+            const overlays = document.querySelectorAll('.image-overlay, .name-overlay');
+            overlays.forEach(overlay => overlay.style.display = isStarted ? 'block' : 'none');
+        };
+        
+        toggleNames.onclick = () => {
+            const nameOverlays = document.querySelectorAll('.name-overlay');
+            nameOverlays.forEach(overlay => overlay.style.display = 'none');
+        };
+        
+        togglePhotos.onclick = () => {
+            const imageOverlays = document.querySelectorAll('.image-overlay');
+            imageOverlays.forEach(overlay => overlay.style.display = 'none');
+        };
+    </script>
+</body>
+</html>
