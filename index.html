@@ -107,11 +107,11 @@
         <input type="file" id="uploadOriginal" class="file-input" accept="image/*">
         <label class="file-label" for="uploadEdited">보정본</label>
         <input type="file" id="uploadEdited" class="file-input" accept="image/*" multiple>
-        <select id="columnSelect">
-            <option value="2">2개</option>
-            <option value="3" selected>3개</option>
-            <option value="4">4개</option>
-        </select>
+        <div>
+            <button id="decreaseColumns">-</button>
+            <input type="number" id="columnInput" value="3" min="1" style="width: 50px; text-align: center;">
+            <button id="increaseColumns">+</button>
+        </div>
     </div>
     
     <div class="first-row" id="firstRow"></div>
@@ -135,7 +135,43 @@
             firstRow.style.maxWidth = `${columns * 200}px`;
         }
         
-        columnSelect.addEventListener('change', updateGridColumns);
+        const columnInput = document.getElementById('columnInput');
+        const increaseColumns = document.getElementById('increaseColumns');
+        const decreaseColumns = document.getElementById('decreaseColumns');
+
+        function updateGridColumns() {
+        let columns = Math.max(1, parseInt(columnInput.value)); // 최소 1 이상
+        container.style.gridTemplateColumns = `repeat(${columns}, 1fr)`;
+        
+        // firstRow 내부 이미지도 같은 크기로 설정
+        const firstRowImage = firstRow.querySelector('.image-box');
+        if (firstRowImage) {
+            firstRow.style.display = 'grid';
+            firstRow.style.gridTemplateColumns = `repeat(${columns}, 1fr)`;
+        } else {
+            firstRow.style.display = 'block'; // 원본 이미지가 없을 경우 기본 블록 유지
+        }
+    }
+
+
+        // 숫자 입력 시 반영
+        columnInput.addEventListener('input', updateGridColumns);
+
+        // + 버튼 클릭 시
+        increaseColumns.addEventListener('click', () => {
+            columnInput.value = Math.max(1, parseInt(columnInput.value) + 1);
+            updateGridColumns();
+        });
+
+        // - 버튼 클릭 시
+        decreaseColumns.addEventListener('click', () => {
+            columnInput.value = Math.max(1, parseInt(columnInput.value) - 1);
+            updateGridColumns();
+        });
+
+        // 초기화
+        updateGridColumns();
+
         
         function addImage(src, isOriginal = false) {
     const div = document.createElement('div');
@@ -188,10 +224,16 @@
     }
     
     if (isOriginal) {
-        firstRow.innerHTML = '';
-        firstRow.appendChild(div);
-        updateGridColumns();
-    } else {
+    firstRow.innerHTML = '';
+    firstRow.appendChild(div);
+    
+    // 원본 이미지도 보정본과 동일한 크기로 설정
+    div.style.width = '100%';
+    
+    updateGridColumns();
+}
+
+    else {
         container.appendChild(div);
     }
 }
